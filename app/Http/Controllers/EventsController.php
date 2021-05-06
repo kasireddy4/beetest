@@ -8,6 +8,7 @@ use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Date;
+use Carbon\Carbon;
 
 class EventsController extends BaseController
 {
@@ -103,7 +104,7 @@ class EventsController extends BaseController
 		 if(!empty($events)){
 		   foreach($events as $event){
 		    $result[] = ["id"=>$event->id,
-            "name"=>$event->id,
+            "name"=>$event->name,
             "created_at"=>$event->created_at,
             "updated_at"=>$event->updated_at,
             "workshops"=>$event->workshops];
@@ -192,21 +193,39 @@ class EventsController extends BaseController
 
     public function getFutureEventsWithWorkshops() {
 	     try{
-		 $result = [];
-		 $events = Event::with("futureworkshops")->get();
+		 $result = $furtureWorks = [];
+		 //$events = Event::with("futureworkshops")->get();
+		   $objevents = new Event();
+		   $date = Carbon::now();
+		   $events = \DB::table('events as e')
+                        ->join("workshops as w","e.id","=","w.event_id")
+                        ->select("e.id as e_id","e.name","e.created_at as e_create","e.updated_at as e_update","w.*")
+                        ->where('w.start', '>',$date)
+                        ->orderBy('e.id', 'Asc')->get();
 		 if(!empty($events)){
 		   foreach($events as $event){
-		    $result[] = ["id"=>$event->id,
-            "name"=>$event->id,
-            "created_at"=>$event->created_at,
-            "updated_at"=>$event->updated_at,
-            "workshops"=>$event->futureworkshops];
+		    $furtureWorks[$event->e_id][$event->id] = [
+			       "id"=>$event->id,
+                    "start"=>$event->start,
+                    "end"=>$event->end,
+                    "event_id"=>$event->event_id,
+                    "name"=>$event->name,
+                    "created_at"=>$event->created_at,
+                    "updated_at"=>$event->updated_at
+			];
+		    $result[$event->e_id] = [
+			"id"=>$event->e_id,
+            "name"=>$event->name,
+            "created_at"=>$event->e_create,
+            "updated_at"=>$event->e_update,
+            "workshops"=>array_values($furtureWorks[$event->e_id])
+			];
 		   }
 		 }
-	   return response()->json($result,200);
+	    return response()->json(array_values($result),200);
 		 }catch(\Exception $e){
-        throw new \Exception('implement in coding task 1');
+        throw new \Exception( $e->getmessage().'implement in coding task 2');
 		}
-        throw new \Exception('implement in coding task 2');
+       
     }
 }
